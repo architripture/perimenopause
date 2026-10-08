@@ -1,0 +1,21 @@
+'use strict';
+function buildPersonalPdf(){
+ const {jsPDF}=window.jspdf;const doc=new jsPDF({unit:'mm',format:'a4',compress:true,putOnlyUsedFonts:true});
+ for(const [font,data] of Object.entries(window.PDF_FONTS)){doc.addFileToVFS(font+'.ttf',data);doc.addFont(font+'.ttf',font,'normal');}
+ doc.setProperties({title:'Что важно мне сейчас — мой личный лист',author:'Маша Хёрд',subject:'Наблюдения и следующий шаг. Не медицинское заключение.'});
+ const margin=20,width=170,bottom=271;let y=23;
+ function header(first){doc.setFillColor(248,246,241);doc.rect(0,0,210,297,'F');doc.setTextColor(31,56,110);doc.setFont('Coolvetica');doc.setFontSize(15);doc.text('в ритме женщины',margin,15);doc.setFont('Text');doc.setFontSize(10);doc.text('Маша Хёрд',190,15,{align:'right'});doc.setDrawColor(209,206,196);doc.line(margin,19,190,19);y=first?35:30;}
+ function newPage(){doc.addPage();header(false);}
+ function lines(text,font='Text',size=12,color=[38,38,35],leading=6){doc.setFont(font);doc.setFontSize(size);doc.setTextColor(...color);const a=doc.splitTextToSize(String(text),width);for(const line of a){if(y>bottom){newPage();doc.setFont(font);doc.setFontSize(size);doc.setTextColor(...color);}doc.text(line,margin,y);y+=leading;}}
+ function section(title,text){if(y+26>bottom)newPage();doc.setDrawColor(209,206,196);doc.line(margin,y-3,190,y-3);y+=4;lines(title.toUpperCase(),'Text',10,[101,99,92],5);y+=2;lines(text);y+=8;}
+ header(true);lines('Что важно мне сейчас','Coolvetica',32,[31,56,110],13);lines('не идеально. по-своему.','Gogol',25,[150,30,18],12);y+=3;lines('Мои наблюдения и решения. Это не оценка здоровья и не медицинские назначения.','Text',11,[101,99,92],5.5);y+=10;
+ for(const [title,text] of resultRows())section(title,text);
+ section('Вопрос, который можно взять с собой','Какие причины моих изменений стоит рассмотреть и какой следующий шаг подходит моей ситуации?');
+ section('Когда этого листа недостаточно','Если изменения беспокоят, не нужно ждать заполненного листа, чтобы обратиться за помощью. Этот инструмент не определяет причину симптомов или срочность обращения. При резком ухудшении обращайся за медицинской помощью, не дожидаясь выполнения плана.');
+ if(y+44>bottom)newPage();lines('Сохранить себе','Coolvetica',20,[31,56,110],9);lines('Это твой рабочий лист. Его можно менять. Тебе не нужно выполнять всё одновременно. Сначала — то, что важно сейчас.','Text',12,[38,38,35],6);y+=7;
+ lines('Информационная основа: NHS — Menopause and perimenopause; NHS — Things you can do; NICE NG23. Упражнения не являются медицинским тестом.','Text',10,[101,99,92],5);
+ for(let i=1;i<=doc.getNumberOfPages();i++){doc.setPage(i);doc.setFont('Text');doc.setFontSize(9);doc.setTextColor(101,99,92);doc.text('Личный лист · не медицинское заключение',20,285);doc.text(`${i} / ${doc.getNumberOfPages()}`,190,285,{align:'right'});}
+ return doc;
+}
+$('#pdf').addEventListener('click',()=>{const button=$('#pdf'),status=$('#export-status');button.disabled=true;status.textContent='Собираю PDF с твоими ответами…';try{const doc=buildPersonalPdf();const blob=doc.output('blob');const link=document.createElement('a');const url=URL.createObjectURL(blob);link.href=url;link.download='Мой_следующий_шаг_Маша_Хёрд.pdf';document.body.append(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);status.textContent='PDF сформирован. Браузер скачает файл или предложит сохранить его. Если ничего не произошло, используй кнопку ниже.';$('#pdf-fallback').hidden=false;}catch(e){status.textContent='Браузер не смог сформировать PDF. Ответы остались на экране. Попробуй версию для печати или открой страницу в Safari / Chrome.';$('#pdf-fallback').hidden=false;}finally{button.disabled=false;}});
+$('#print').addEventListener('click',()=>{renderResult();window.print();});
